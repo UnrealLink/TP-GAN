@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from Blocks import ConvBlock, DeConvBlock, ResidualBlock, Sequential
 
+
 class LocalPathway(nn.Module):
     def __init__(self):
         super(LocalPathway, self).__init__()
