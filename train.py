@@ -17,17 +17,14 @@ if __name__ == "__main__":
     
     print('Dataset initialized')
 
-<<<<<<< HEAD
+    device = torch.device(settings['device'])
+
     if device == "cpu":
         G = Generator(noise_dim = 64, num_classes = 100)
         D = Discriminator()
     else:
-        G = torch.nn.DataParallel(Generator(noise_dim = 64, num_classes = 100)).to(device)
-        D = torch.nn.DataParallel(Discriminator()).to(device)
-=======
-    G = torch.nn.DataParallel(Generator(noise_dim = 64, num_classes = 100)).cuda()
-    D = torch.nn.DataParallel(Discriminator()).cuda()
->>>>>>> parent of 1b4e19f... CPU only availability
+        G = torch.nn.DataParallel(Generator(noise_dim = 64, num_classes = 100)).cuda()
+        D = torch.nn.DataParallel(Discriminator()).cuda()
 
     print('Network created')
 
@@ -43,7 +40,7 @@ if __name__ == "__main__":
 
     for step, batch in enumerate(dataloader):
 
-        noise = torch.FloatTensor(np.random.uniform(-1,1,(len(batch['img128']), 64))).cuda()
+        noise = torch.FloatTensor(np.random.uniform(-1,1,(len(batch['img128']), 64))).to(device)
         img128_fake, img64_fake, img32_fake, encoder_predict, local_fake, left_eye_fake, right_eye_fake, nose_fake, mouth_fake, local_GT = \
             G(batch['img128'], batch['img64'], batch['img32'], batch['left_eye'], batch['right_eye'], batch['nose'], batch['mouth'], noise)
 
