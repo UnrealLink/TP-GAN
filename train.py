@@ -19,8 +19,12 @@ if __name__ == "__main__":
     
     print('Dataset initialized')
 
-    G = torch.nn.DataParallel(Generator(noise_dim = 64, num_classes = 100)).to(device)
-    D = torch.nn.DataParallel(Discriminator()).to(device)
+    if device == "cpu":
+        G = Generator(noise_dim = 64, num_classes = 100)
+        D = Discriminator()
+    else:
+        G = torch.nn.DataParallel(Generator(noise_dim = 64, num_classes = 100)).to(device)
+        D = torch.nn.DataParallel(Discriminator()).to(device)
 
     print('Network created')
 
