@@ -6,7 +6,6 @@ from Dataset import TrainingSet
 from Network import Generator, Discriminator
 from Loss import LossGenerator, LossDiscriminator
 from config import settings
-from Blocks import ResidualBlock
 
 if __name__ == "__main__":
 

@@ -15,14 +15,14 @@ def cut_patches(image, patches):
     Nose : 46x66
     Mouth : 69x25
     '''
-    left_eye = transforms.functional.pad(transforms.functional.crop(image, *process_coord(**patches['Left eye'])), 
-        (0, 0, 48-int(patches['Left eye']['width']), 24-int(patches['Left eye']['height'])))
-    right_eye = transforms.functional.pad(transforms.functional.crop(image, *process_coord(**patches['Right eye'])),
-        (0, 0, 48-int(patches['Right eye']['width']), 24-int(patches['Right eye']['height'])))
-    nose = transforms.functional.pad(transforms.functional.crop(image, *process_coord(**patches['Nose'])),
-        (0, 0, 48-int(patches['Nose']['width']), 64-int(patches['Nose']['height'])))
-    mouth = transforms.functional.pad(transforms.functional.crop(image, *process_coord(**patches['Mouth'])),
-        (0, 0, 80-int(patches['Mouth']['width']), 24-int(patches['Mouth']['height'])))
+    left_eye = transforms.functional.crop(image, *process_coord(**patches['Left eye']))
+    left_eye = transforms.functional.pad(left_eye, (0, 0, 48-left_eye.size[-2], 24-left_eye.size[-1]))
+    right_eye = transforms.functional.crop(image, *process_coord(**patches['Right eye']))
+    right_eye = transforms.functional.pad(right_eye, (0, 0, 48-right_eye.size[-2], 24-right_eye.size[-1]))
+    nose = transforms.functional.crop(image, *process_coord(**patches['Nose']))
+    nose = transforms.functional.pad(nose, (0, 0, 48-nose.size[-2], 64-nose.size[-1]))
+    mouth = transforms.functional.crop(image, *process_coord(**patches['Mouth']))
+    mouth = transforms.functional.pad(mouth, (0, 0, 80-mouth.size[-2], 32-mouth.size[-1]))
     return left_eye, right_eye, nose, mouth
 
 class TrainingSet(Dataset):
