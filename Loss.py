@@ -67,7 +67,7 @@ class LossGenerator(nn.Module):
         tv_loss  = self.total_variation_loss(img128_fake)
         L_syn    = pw_loss + 0.3*sym_loss + 0.001*adv_loss + 0.003*ip_loss + 0.0001*tv_loss
         ce_loss  = self.cross_entropy_loss(encoder_predict, batch)
-        return L_syn + 0.1*ce_loss
+        return L_syn + 0.1*ce_loss, {'pw_loss':pw_loss, 'sym_loss':sym_loss, 'adv_loss':adv_loss, 'ip_loss':ip_loss, 'tv_loss':tv_loss, 'L_syn':L_syn, 'ce_loss':ce_loss, 'total':L_syn + 0.1*ce_loss}
     
     
 class LossDiscriminator(nn.Module):

@@ -330,7 +330,7 @@ class GlobalPathway(nn.Module):
         feat64        = self.feat64(feat32)
         deconv64      = self.deconv64(reconstruct32)
         decode64      = self.decode64(torch.cat([feat64, conv1, img64], 1))
-        reconstruct64 = self.reconstruct64(torch.cat([deconv64, decode64, nn.functional.interpolate(output32.data, (64,64), mode='bilinear')], 1))
+        reconstruct64 = self.reconstruct64(torch.cat([deconv64, decode64, nn.functional.interpolate(output32.data, (64,64), mode='bilinear', align_corners=False)], 1))
         output64      = self.output64( reconstruct64 )
         assert output64.shape[2] == 64
         
@@ -338,7 +338,7 @@ class GlobalPathway(nn.Module):
         feat128        = self.feat128(feat64)
         deconv128      = self.deconv128(reconstruct64)
         decode128      = self.decode128(torch.cat([feat128, conv0, img128], 1))
-        reconstruct128 = self.reconstruct128(torch.cat([deconv128, decode128, nn.functional.interpolate(output64, (128,128), mode='bilinear'),  local_feature, local_predict], 1))
+        reconstruct128 = self.reconstruct128(torch.cat([deconv128, decode128, nn.functional.interpolate(output64, (128,128), mode='bilinear', align_corners=False),  local_feature, local_predict], 1))
         decode_conv0   = self.decode_conv0(reconstruct128)
         decode_conv1   = self.decode_conv1(decode_conv0)
         output128      = self.output128(decode_conv1)

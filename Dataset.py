@@ -3,6 +3,7 @@ import torchvision.transforms as transforms
 from PIL import Image
 import yaml
 import os
+from random import random
 
 def process_coord(x, y, width, height):
     return y, x, int(height), int(width)
@@ -25,16 +26,16 @@ def cut_patches(image, patches):
     mouth = transforms.functional.pad(mouth, (0, 0, 80-mouth.size[-2], 32-mouth.size[-1]))
     return left_eye, right_eye, nose, mouth
 
-class TrainingSet(Dataset):
-    def __init__(self, images_list, images_dir):
-        super(TrainingSet, self).__init__()
-        with open(images_list, 'r') as rf:
-            self.images_list = yaml.safe_load(rf.read())
+class CustomDataset(Dataset):
+    def __init__(self, images_list_selected, images_list_all, images_dir):
+        super(CustomDataset, self).__init__()
+        self.images_list_selected = images_list_selected
+        self.images_list = images_list_all
         self.images_dir = images_dir
-        self.keys = list(self.images_list.keys())
+        self.keys = list(self.images_list_selected)
         
     def __len__(self):
-        return len(self.images_list.keys())
+        return len(self.images_list_selected)
     
     def __getitem__(self, idx):
         # Return a dict with :
@@ -65,3 +66,18 @@ class TrainingSet(Dataset):
             #print('{} : {}'.format(k, batch[k].shape))
         
         return batch
+
+def createDataset(images_list, images_dir, p_test=0.1):
+    with open(images_list, 'r') as rf:
+        images_list_all = yaml.safe_load(rf.read())
+    
+    images_list_test = list()
+    images_list_train = list()
+    for k in images_list_all.keys():
+        if random() < p_test:
+            images_list_test.append(k)
+        else:
+            images_list_train.append(k)
+    
+    return CustomDataset(images_list_train, images_list_all, images_dir), CustomDataset(images_list_test, images_list_all, images_dir)
+
