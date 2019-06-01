@@ -71,16 +71,24 @@ def createDataset(images_list, images_dir, p_test=0.1):
     with open(images_list, 'r') as rf:
         images_list_all = yaml.safe_load(rf.read())
     
-    nb_total = len(images_list_all)
-    counter = 0
     images_list_test = list()
     images_list_train = list()
-    for k in images_list_all.keys():
-        if counter < nb_total*p_test:
-            images_list_test.append(k)
-            counter += 1
-        else:
-            images_list_train.append(k)
+
+    if p_test == 1:
+        for k in images_list_all.keys():
+            if images_list_all[k]['img'] != images_list_all[k]['imgGT']:
+                images_list_test.append(k)
+    else:
+        nb_total = len(images_list_all)
+        counter = 0
+        
+        for k in images_list_all.keys():
+            if counter < nb_total*p_test:
+                images_list_test.append(k)
+                counter += 1
+            else:
+                images_list_train.append(k)
+    
     
     return CustomDataset(images_list_train, images_list_all, images_dir), CustomDataset(images_list_test, images_list_all, images_dir)
 

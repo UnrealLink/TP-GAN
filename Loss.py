@@ -30,7 +30,7 @@ class LossGenerator(nn.Module):
         lm  = self.L1Loss(mouth_fake.cpu(), batch['mouthGT'])
         return (lle + lre + ln + lm).to(device)
     
-     def _cut(self, img, patch, name):
+    def _cut(self, img, patch, name):
         '''
         Patch : max_w x max_h
         Left eye : 44x22
