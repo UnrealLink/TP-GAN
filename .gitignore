@@ -328,3 +328,4 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
+LightCNN_29Layers_V2_checkpoint.pth.tar
