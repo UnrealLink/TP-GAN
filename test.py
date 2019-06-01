@@ -15,10 +15,10 @@ import os
 def parse_args():
     parser = argparse.ArgumentParser(description='''Show the output of trained TP-GAN on the input images.
                                                     Input is not sanitized, please be nice. ''')
-    parser.add_argument('-l', '--img-list', type=str, help='yaml file of input processed input images')
-    parser.add_argument('-d', '--img-dir', type=str, help='directory of processed input images')
-    parser.add_argument('-m', '--model', type=str, help='path to generator checkpoint')
-    parser.add_argument('-o', '--output', type=str, help='path to save image output')
+    parser.add_argument('-l', '--img-list', type=str, default='image_list_reduced.yml', help='yaml file of input processed input images')
+    parser.add_argument('-d', '--img-dir', type=str, default='put_cleaned', help='directory of processed input images')
+    parser.add_argument('-m', '--model', type=str, default='model_generator_20.pth', help='path to generator checkpoint')
+    parser.add_argument('-o', '--output', type=str, default='image.png', help='path to save image output')
     parser.add_argument('-c', action='store_true', default=False, help='cpu only (no cuda)')
 
     args = parser.parse_args()
