@@ -19,7 +19,7 @@ def parse_args():
     parser.add_argument('-d', '--img-dir', type=str, help='directory of processed input images')
     parser.add_argument('-m', '--model', type=str, help='path to generator checkpoint')
     parser.add_argument('-o', '--output', type=str, help='path to save image output')
-    parser.add_argument('-c', action='store_false', default=True, help='cpu only (no cuda)')
+    parser.add_argument('-c', action='store_true', default=False, help='cpu only (no cuda)')
 
     args = parser.parse_args()
     return args
@@ -31,22 +31,24 @@ if __name__ == "__main__":
     print('Starting...')
 
     _, testSet = createDataset(args.img_list, args.img_dir, 0.01)
-    testloader = torch.utils.data.DataLoader(testSet, batch_size = 1, shuffle = False, num_workers = 4, pin_memory = True)
+    testloader = torch.utils.data.DataLoader(testSet, batch_size = 1, shuffle = False, num_workers = 1, pin_memory = True)
 
     print('Dataset initialized')
-    if args.c:
+    if not(args.c):
         device = torch.device('cuda')
     else:
         device = torch.device('cpu')
 
-    if device == "cpu":
+    if args.c:
         G = Generator(noise_dim = 64, num_classes = 100)
+        G.load_state_dict(torch.load(args.model))
     else:
         G = torch.nn.DataParallel(Generator(noise_dim = 64, num_classes = 100)).to(device)
+        G.module.load_state_dict(torch.load(args.model))
         
     print('Network created')
 
-    G.module.load_state_dict(torch.load(args.model))
+    
 
     print('Finished loading checkpoints')
 
@@ -57,38 +59,37 @@ if __name__ == "__main__":
 
     for batch in tqdm(testloader):
             
-            noise = torch.FloatTensor(np.random.normal(0,0.02,(len(batch['img128']), 64))).to(device)
-            img128_fake, img64_fake, img32_fake, encoder_predict, local_fake, left_eye_fake, right_eye_fake, nose_fake, mouth_fake, local_GT = \
-                G(batch['img128'], batch['img64'], batch['img32'], batch['left_eye'], batch['right_eye'], batch['nose'], batch['mouth'], noise)
+        noise = torch.FloatTensor(np.random.normal(0,0.02,(len(batch['img128']), 64))).to(device)
+        img128_fake, img64_fake, img32_fake, encoder_predict, local_fake, left_eye_fake, right_eye_fake, nose_fake, mouth_fake, local_GT = \
+            G(batch['img128'], batch['img64'], batch['img32'], batch['left_eye'], batch['right_eye'], batch['nose'], batch['mouth'], noise)
 
-            img_list.append({'input': toPIL(batch['img128'].detach().cpu().reshape(*batch['img128'].shape[1:])), 
-                                'fake': toPIL(img128_fake.detach().cpu().reshape(*img128_fake.shape[1:])), 
-                                'GT': toPIL(batch['img128GT'].detach().cpu().reshape(*batch['img128GT'].shape[1:])), 
-                                'local': toPIL(local_fake.detach().cpu().reshape(*local_fake.shape[1:]))})
+        img_list.append({'input': toPIL(batch['img128'].detach().cpu().reshape(*batch['img128'].shape[1:])), 
+                            'fake': toPIL(img128_fake.detach().cpu().reshape(*img128_fake.shape[1:])), 
+                            'GT': toPIL(batch['img128GT'].detach().cpu().reshape(*batch['img128GT'].shape[1:])), 
+                            'local': toPIL(local_fake.detach().cpu().reshape(*local_fake.shape[1:]))})
 
-w=10
-h=10
-fig=plt.figure(figsize=(16, 16))
-columns = 4
-rows = len(img_list)
-for i in range(rows):
-    images = img_list[i]
-    img = images['input']
-    fig.add_subplot(rows, columns, 1 + 4*i)
-    plt.imshow(img)
-    img = images['fake']
-    fig.add_subplot(rows, columns, 2 + 4*i)
-    plt.imshow(img)
-    img = images['local']
-    fig.add_subplot(rows, columns, 3 + 4*i)
-    plt.imshow(img)
-    img = images['GT']
-    fig.add_subplot(rows, columns, 4 + 4*i)
-    plt.imshow(img)
-plt.tight_layout()
-if args.output != '':
-    try:
-        fig.savefig(args.output)
-    except Exception as e:
-        print("Couldn't save figure : {}".format(e))
-plt.show()
+    
+    columns = 4
+    rows = min(10, len(img_list))
+    fig=plt.figure(figsize=(16, 4 * rows))
+    for i in range(rows):
+        images = img_list[i]
+        img = images['input']
+        fig.add_subplot(rows, columns, 1 + 4*i)
+        plt.imshow(img)
+        img = images['fake']
+        fig.add_subplot(rows, columns, 2 + 4*i)
+        plt.imshow(img)
+        img = images['local']
+        fig.add_subplot(rows, columns, 3 + 4*i)
+        plt.imshow(img)
+        img = images['GT']
+        fig.add_subplot(rows, columns, 4 + 4*i)
+        plt.imshow(img)
+    plt.tight_layout()
+    if args.output != '':
+        try:
+            fig.savefig(args.output)
+        except Exception as e:
+            print("Couldn't save figure : {}".format(e))
+    plt.show()

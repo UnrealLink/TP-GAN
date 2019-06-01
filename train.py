@@ -131,9 +131,8 @@ if __name__ == "__main__":
                                 'local': toPIL(local_fake.detach().cpu().reshape(*local_fake.shape[1:]))})
         
         images = img_fake_histo[-1]
-        w=10
-        h=10
-        fig=plt.figure(figsize=(16, 16))
+
+        fig=plt.figure(figsize=(16, 4))
         columns = 4
         rows = 1
         img = images['input']
