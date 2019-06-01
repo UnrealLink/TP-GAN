@@ -30,10 +30,37 @@ class LossGenerator(nn.Module):
         lm  = self.L1Loss(mouth_fake.cpu(), batch['mouthGT'])
         return (lle + lre + ln + lm).to(device)
     
+     def _cut(self, img, patch, name):
+        '''
+        Patch : max_w x max_h
+        Left eye : 44x22
+        Right eye : 44x22
+        Nose : 46x66
+        Mouth : 69x25
+        '''
+        if name == 'left_eye' or name == 'right_eye':
+            return torch.cat([img[i,:, int(patch['y'][i]):int(patch['y'][i])+22, int(patch['x'][i]):int(patch['x'][i])+28] for i in range(img.shape[0])], 0)
+        if name == 'nose':
+            return torch.cat([img[i,:, int(patch['y'][i]):int(patch['y'][i])+66, int(patch['x'][i]):int(patch['x'][i])+46] for i in range(img.shape[0])], 0)
+        if name == 'mouth':
+            return torch.cat([img[i,:, int(patch['y'][i]):int(patch['y'][i])+25, int(patch['x'][i]):int(patch['x'][i])+54] for i in range(img.shape[0])], 0)
+    
+    def _pixelwise_loss_local2(self, img128_fake, batch):
+        lle = self.L1Loss(self._cut(img128_fake.cpu(), batch['patches']['left_eye'], 'left_eye'),
+                          self._cut(batch['img128GT'].cpu(), batch['patches']['left_eye'], 'left_eye'))
+        lre = self.L1Loss(self._cut(img128_fake.cpu(), batch['patches']['right_eye'], 'right_eye'),
+                          self._cut(batch['img128GT'].cpu(), batch['patches']['right_eye'], 'right_eye'))
+        ln  = self.L1Loss(self._cut(img128_fake.cpu(), batch['patches']['nose'], 'nose'),
+                          self._cut(batch['img128GT'].cpu(), batch['patches']['nose'], 'nose'))
+        lm  = self.L1Loss(self._cut(img128_fake.cpu(), batch['patches']['mouth'], 'mouth'),
+                          self._cut(batch['img128GT'].cpu(), batch['patches']['mouth'], 'mouth'))
+        return (lle + lre + ln + lm).to(device)
+    
     def pixelwise_loss(self, img128_fake, img64_fake, img32_fake, left_eye_fake, right_eye_fake, nose_fake, mouth_fake, batch):
         global_loss = self._pixelwise_loss_global(img128_fake, img64_fake, img32_fake, batch)
         local_loss  = self._pixelwise_loss_local(left_eye_fake, right_eye_fake, nose_fake, mouth_fake, batch)
-        return global_loss + 3*local_loss
+        local_loss2 = self._pixelwise_loss_local2(img128_fake, batch)
+        return global_loss + 3*local_loss + 3*local_loss2
     
     def symmetry_loss(self, img128_fake, img64_fake, img32_fake):
         img128_fake_mirror = img128_fake.index_select(3, torch.arange(img128_fake.size()[3]-1, -1, -1).long().to(device))

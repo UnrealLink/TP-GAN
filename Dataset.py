@@ -60,7 +60,7 @@ class CustomDataset(Dataset):
         
         toTensor = transforms.ToTensor()
         for k in batch.keys():
-            if (k == 'id'):
+            if (k == 'id' or k == 'patches'):
                 continue
             batch[k] = toTensor(batch[k])
             #print('{} : {}'.format(k, batch[k].shape))

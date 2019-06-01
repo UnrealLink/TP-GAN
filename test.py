@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     print('Starting...')
 
-    _, testSet = createDataset(args.img_list, args.img_dir, 0.01)
+    _, testSet = createDataset(args.img_list, args.img_dir, 1)
     testloader = torch.utils.data.DataLoader(testSet, batch_size = 1, shuffle = False, num_workers = 1, pin_memory = True)
 
     print('Dataset initialized')
@@ -56,6 +56,7 @@ if __name__ == "__main__":
 
     img_list = list()
     toPIL = transforms.ToPILImage()
+    
 
     for batch in tqdm(testloader):
             
