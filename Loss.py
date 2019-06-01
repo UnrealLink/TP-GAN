@@ -1,7 +1,10 @@
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
+import torchvision.transforms.functional as tf
 from config import settings
+from LightCNN import LightCNN_29Layers_v2
+
 
 device = settings['device']
 
@@ -11,7 +14,8 @@ class LossGenerator(nn.Module):
         self.L1Loss = nn.L1Loss().to(device)
         self.MSELoss = nn.MSELoss().to(device)
         self.CrossEntropy = nn.CrossEntropyLoss().to(device)
-        #self.ExtractFeatures = nn.DataParallel(feature_extract_model).to(device) # TODO
+        self.ExtractFeatures = torch.nn.DataParallel(LightCNN_29Layers_v2(num_classes=80013)).to(settings['device'])
+        self.ExtractFeatures.load_state_dict(torch.load(settings['light_cnn'])['state_dict'])
     
     def _pixelwise_loss_global(self, img128_fake, img64_fake, img32_fake, batch):
         l128 = self.L1Loss(img128_fake.cpu(), batch['img128GT'])
@@ -47,11 +51,9 @@ class LossGenerator(nn.Module):
         return - torch.mean(D(img128_fake))
     
     def identity_preserving_loss(self, img128_fake, batch):
-        #feature_GT, fc_GT = self.ExtractFeatures(batch['img128GT'])
-        #feature_fake, fc_fake = self.ExtractFeatures(img128_fake)
-        #return = self.MSELoss(feature_fake, feature_GF.detach())
-        # TO DO
-        return 0
+        _, feat_fake = light_cnn((img128_fake[:,0,:,:]*0.2126 + img128_fake[:,0,:,:]*0.7152 + img128_fake[:,0,:,:]*0.0722).view(img128_fake.shape[0], 1, img128_fake.shape[2], img128_fake.shape[3]))
+        _, feat_GT = light_cnn((batch['img128GT'][:,0,:,:]*0.2126 + batch['img128GT'][:,0,:,:]*0.7152 + batch['img128GT'][:,0,:,:]*0.0722).view(batch['img128GT'].shape[0], 1, batch['img128GT'].shape[2], batch['img128GT'].shape[3]))
+        return self.L1Loss(feat_fake, feat_GT)
     
     def total_variation_loss(self, img128_fake):
         return torch.mean(torch.abs(img128_fake[:,:,:-1,:] - img128_fake[:,:,1:,:])) + torch.mean(torch.abs(img128_fake[:,:,:,:-1] - img128_fake[:,:,:,1:]))
@@ -67,7 +69,7 @@ class LossGenerator(nn.Module):
         tv_loss  = self.total_variation_loss(img128_fake)
         L_syn    = pw_loss + 0.3*sym_loss + 0.001*adv_loss + 0.003*ip_loss + 0.0001*tv_loss
         ce_loss  = self.cross_entropy_loss(encoder_predict, batch)
-        return L_syn + 0.1*ce_loss, {'pw_loss':pw_loss, 'sym_loss':sym_loss, 'adv_loss':adv_loss, 'ip_loss':ip_loss, 'tv_loss':tv_loss, 'L_syn':L_syn, 'ce_loss':ce_loss, 'total':L_syn + 0.1*ce_loss}
+        return L_syn + 0.1*ce_loss, {'pw_loss':pw_loss, 'sym_loss':0.3*sym_loss, 'adv_loss':0.001*adv_loss, 'ip_loss':0.003*ip_loss, 'tv_loss':0.0001*tv_loss, 'L_syn':L_syn, 'ce_loss':0.1*ce_loss, 'total':L_syn + 0.1*ce_loss}
     
     
 class LossDiscriminator(nn.Module):

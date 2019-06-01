@@ -1,12 +1,16 @@
 import torch
 import torch.nn as nn
 import torchvision
+import torchvision.transforms as transforms
 import numpy as np
 from Dataset import createDataset
 from Network import Generator, Discriminator
 from Loss import LossGenerator, LossDiscriminator
 from config import settings
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+import pickle
+import os
 
 if __name__ == "__main__":
 
@@ -15,7 +19,7 @@ if __name__ == "__main__":
     trainSet, testSet = createDataset(settings['images_list'], settings['images_dir'])
     trainloader = torch.utils.data.DataLoader(trainSet, batch_size = settings['batch_size'], shuffle = True, num_workers = 2, pin_memory = True)
     testloader = torch.utils.data.DataLoader(testSet, batch_size = 1, shuffle = True, num_workers = 2, pin_memory = True)
-    
+
     print('Dataset initialized')
 
     device = torch.device(settings['device'])
@@ -26,13 +30,19 @@ if __name__ == "__main__":
     else:
         G = torch.nn.DataParallel(Generator(noise_dim = 64, num_classes = 100)).cuda()
         D = torch.nn.DataParallel(Discriminator()).cuda()
-
+        
     print('Network created')
 
-    optimizer_G = torch.optim.SGD(filter(lambda p: p.requires_grad, G.parameters()), lr = 1e-4)
-    optimizer_D = torch.optim.SGD(filter(lambda p: p.requires_grad, D.parameters()), lr = 1e-4)
+    optimizer_G = torch.optim.Adam(filter(lambda p: p.requires_grad, G.parameters()), lr = 1e-4)
+    optimizer_D = torch.optim.Adam(filter(lambda p: p.requires_grad, D.parameters()), lr = 1e-4)
 
     print('Optimizer created')
+
+    G.module.load_state_dict(torch.load('model/model_generator_1.pth'))
+    D.module.load_state_dict(torch.load('model/model_discriminator_1.pth'))
+    optimizer_G.load_state_dict(torch.load('opt/opt_generator_1.pth'))
+    optimizer_D.load_state_dict(torch.load('opt/opt_discriminator_1.pth'))
+    print('Finished loading checkpoints')
 
     loss_G = LossGenerator()
     loss_D = LossDiscriminator()
@@ -43,11 +53,12 @@ if __name__ == "__main__":
 
     loss_D_histo = list()
     loss_G_histo = list()
+    img_fake_histo = list()
 
-    for epoch in tqdm(settings['nb_epochs']):
+    for epoch in tqdm(range(settings['nb_epoch'])):
         for batch in tqdm(trainloader):
-
-            noise = torch.FloatTensor(np.random.uniform(-1,1,(len(batch['img128']), 64))).to(device)
+            
+            noise = torch.FloatTensor(np.random.normal(0,0.02,(len(batch['img128']), 64))).to(device)
             img128_fake, img64_fake, img32_fake, encoder_predict, local_fake, left_eye_fake, right_eye_fake, nose_fake, mouth_fake, local_GT = \
                 G(batch['img128'], batch['img64'], batch['img32'], batch['left_eye'], batch['right_eye'], batch['nose'], batch['mouth'], noise)
 
@@ -67,33 +78,74 @@ if __name__ == "__main__":
             LG.backward()
             optimizer_G.step()
 
-        print("Epoch {}/{} finished".format(epoch, settings['nb_epochs']))
+        print("Epoch {}/{} finished".format(epoch+1, settings['nb_epoch']))
         print("Starting testing")
-
+        
+        G.eval()
+        D.eval()
+        
         loss_test_D = 0
         loss_test_G = dict()
         for batch in tqdm(testloader):
-
-            noise = torch.FloatTensor(np.random.uniform(-1,1,(len(batch['img128']), 64))).to(device)
+            
+            noise = torch.FloatTensor(np.random.normal(0,0.02,(len(batch['img128']), 64))).to(device)
             img128_fake, img64_fake, img32_fake, encoder_predict, local_fake, left_eye_fake, right_eye_fake, nose_fake, mouth_fake, local_GT = \
                 G(batch['img128'], batch['img64'], batch['img32'], batch['left_eye'], batch['right_eye'], batch['nose'], batch['mouth'], noise)
 
             LD = loss_D(D, img128_fake, batch)
             LG, losses = loss_G(G, D, img128_fake, img64_fake, img32_fake, encoder_predict, local_fake, left_eye_fake, right_eye_fake, nose_fake, mouth_fake, local_GT, batch)
 
-            loss_test_D += LD
+            loss_test_D += LD.detach()
+            
             if loss_test_G == {}:
-                loss_test_G = losses.copy()
+                for k in losses.keys():
+                    try:
+                        loss_test_G[k] = losses[k].detach()
+                    except:
+                        loss_test_G[k] = losses[k]
             else:
                 for k in losses.keys():
-                    loss_test_G[k] += losses[k]
-        
+                    try:
+                        loss_test_G[k] += losses[k].detach()
+                    except:
+                        loss_test_G[k] += losses[k]
+            
         loss_D_histo.append(loss_test_D/len(testSet))
         for k in loss_test_G.keys():
                     loss_test_G[k] = loss_test_G[k]/len(testSet)
         loss_G_histo.append(loss_test_G.copy())
-            
+
+        batch = trainSet[0]
+        for k in batch.keys():
+            if k == 'id':
+                continue
+            batch[k] = batch[k].reshape((1, *batch[k].shape))
+        noise = torch.FloatTensor(np.random.normal(0,0.02,(len(batch['img128']), 64))).to(device)
+        img128_fake, img64_fake, img32_fake, encoder_predict, local_fake, left_eye_fake, right_eye_fake, nose_fake, mouth_fake, local_GT = \
+                G(batch['img128'], batch['img64'], batch['img32'], batch['left_eye'], batch['right_eye'], batch['nose'], batch['mouth'], noise)
+        img_fake_histo.append(transforms.ToPILImage()(img128_fake.detach().cpu().reshape(*img128_fake.shape[1:])))
+        plt.imshow(img_fake_histo[-1])
+        plt.show()
         
+        print("End of testing")
+        
+        G.train()
+        D.train()
+        
+        torch.save( G.module.state_dict() , settings['generator_path'].format(epoch%2))
+        torch.save( D.module.state_dict() , settings['discriminator_path'].format(epoch%2))
+        torch.save( optimizer_G.state_dict() ,settings['opt_G_path'].format(epoch%2))
+        torch.save( optimizer_D.state_dict() , settings['opt_D_path'].format(epoch%2))
+            
+    with open(os.path.join(settings['histo'], 'loss_D'), 'wb') as f:
+        pickle.dump(loss_D_histo, f)
+    with open(os.path.join(settings['histo'], 'loss_G'), 'wb') as f:
+        pickle.dump(loss_G_histo, f)
+    with open(os.path.join(settings['histo'], 'img_fake'), 'wb') as f:
+        pickle.dump(img_fake_histo, f)
+            
+
 
 
             
+
