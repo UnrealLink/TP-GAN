@@ -71,11 +71,14 @@ def createDataset(images_list, images_dir, p_test=0.1):
     with open(images_list, 'r') as rf:
         images_list_all = yaml.safe_load(rf.read())
     
+    nb_total = len(images_list_all)
+    counter = 0
     images_list_test = list()
     images_list_train = list()
     for k in images_list_all.keys():
-        if random() < p_test:
+        if counter < nb_total*p_test:
             images_list_test.append(k)
+            counter += 1
         else:
             images_list_train.append(k)
     

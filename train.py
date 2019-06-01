@@ -38,11 +38,11 @@ if __name__ == "__main__":
 
     print('Optimizer created')
 
-    G.module.load_state_dict(torch.load('model/model_generator_1.pth'))
-    D.module.load_state_dict(torch.load('model/model_discriminator_1.pth'))
-    optimizer_G.load_state_dict(torch.load('opt/opt_generator_1.pth'))
-    optimizer_D.load_state_dict(torch.load('opt/opt_discriminator_1.pth'))
-    print('Finished loading checkpoints')
+    #G.module.load_state_dict(torch.load('model/model_generator_1.pth'))
+    #D.module.load_state_dict(torch.load('model/model_discriminator_1.pth'))
+    #optimizer_G.load_state_dict(torch.load('opt/opt_generator_1.pth'))
+    #optimizer_D.load_state_dict(torch.load('opt/opt_discriminator_1.pth'))
+    #print('Finished loading checkpoints')
 
     loss_G = LossGenerator()
     loss_D = LossDiscriminator()
@@ -115,7 +115,7 @@ if __name__ == "__main__":
                     loss_test_G[k] = loss_test_G[k]/len(testSet)
         loss_G_histo.append(loss_test_G.copy())
 
-        batch = trainSet[0]
+        batch = testSet[0]
         for k in batch.keys():
             if k == 'id':
                 continue
@@ -123,8 +123,32 @@ if __name__ == "__main__":
         noise = torch.FloatTensor(np.random.normal(0,0.02,(len(batch['img128']), 64))).to(device)
         img128_fake, img64_fake, img32_fake, encoder_predict, local_fake, left_eye_fake, right_eye_fake, nose_fake, mouth_fake, local_GT = \
                 G(batch['img128'], batch['img64'], batch['img32'], batch['left_eye'], batch['right_eye'], batch['nose'], batch['mouth'], noise)
-        img_fake_histo.append(transforms.ToPILImage()(img128_fake.detach().cpu().reshape(*img128_fake.shape[1:])))
-        plt.imshow(img_fake_histo[-1])
+        
+        toPIL = toPIL = transforms.ToPILImage()
+        img_fake_histo.append({'input': toPIL(batch['img128'].detach().cpu().reshape(*batch['img128'].shape[1:])), 
+                                'fake': toPIL(img128_fake.detach().cpu().reshape(*img128_fake.shape[1:])), 
+                                'GT': toPIL(batch['img128GT'].detach().cpu().reshape(*batch['img128GT'].shape[1:])), 
+                                'local': toPIL(local_fake.detach().cpu().reshape(*local_fake.shape[1:]))})
+        
+        images = img_fake_histo[-1]
+        w=10
+        h=10
+        fig=plt.figure(figsize=(16, 16))
+        columns = 4
+        rows = 1
+        img = images['input']
+        fig.add_subplot(rows, columns, 1)
+        plt.imshow(img)
+        img = images['fake']
+        fig.add_subplot(rows, columns, 2)
+        plt.imshow(img)
+        img = images['local']
+        fig.add_subplot(rows, columns, 3)
+        plt.imshow(img)
+        img = images['GT']
+        fig.add_subplot(rows, columns, 4)
+        plt.imshow(img)
+        plt.tight_layout()
         plt.show()
         
         print("End of testing")
