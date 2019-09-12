@@ -98,7 +98,7 @@ class LocalPathway(nn.Module):
         output_local = self.output_local(decode2)
         
         assert output_local.shape == x.shape, "{} {}".format(output_local.shape , x.shape)
-        return output_local , deconv2
+        return output_local , decode2
         
 
 class LocalFuser(nn.Module):
